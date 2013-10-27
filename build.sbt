@@ -30,19 +30,20 @@ libraryDependencies ++= {
   val sprayVersion      = "1.2-20130712"
   Seq(
     "com.typesafe.akka"             %% "akka-actor"           % akkaVersion,
+    "com.typesafe.akka"             %% "akka-slf4j"           % akkaVersion,
+    "com.typesafe.akka"             %%  "akka-testkit"        % akkaVersion   % "test",
     "io.spray"                      %  "spray-can"            % sprayVersion ,
     "io.spray"                      %  "spray-http"           % sprayVersion ,
     "io.spray"                      %  "spray-httpx"          % sprayVersion ,
     "io.spray"                      %  "spray-routing"        % sprayVersion ,
     "io.spray"                      %  "spray-client"         % sprayVersion ,
     "io.spray"                      %% "spray-json"           % "1.2.5"  ,
-    "com.typesafe.akka"             %% "akka-slf4j"           % akkaVersion,
     "ch.qos.logback"                %  "logback-classic"      % "1.0.10",
     "com.typesafe.akka"             %%  "akka-testkit"        % akkaVersion   % "test",
-    "org.json4s"                    %%  "json4s-native"         % "3.2.2",
-    "org.scalatest"                 %% "scalatest"            % "1.9.1"       % "test",
+    "org.json4s"                    %%  "json4s-native"         % "3.2.2"
+    //"org.scalatest"                 %% "scalatest"            % "1.9.1"       % "test",
     // for java examples
-    "com.google.guava"              % "guava"                 % "14.0"
+    //"com.google.guava"              % "guava"                 % "14.0"
   )
 }
 
