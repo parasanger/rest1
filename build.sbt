@@ -31,7 +31,6 @@ libraryDependencies ++= {
   Seq(
     "com.typesafe.akka"             %% "akka-actor"           % akkaVersion,
     "com.typesafe.akka"             %% "akka-slf4j"           % akkaVersion,
-    "com.typesafe.akka"             %%  "akka-testkit"        % akkaVersion   % "test",
     "io.spray"                      %  "spray-can"            % sprayVersion ,
     "io.spray"                      %  "spray-http"           % sprayVersion ,
     "io.spray"                      %  "spray-httpx"          % sprayVersion ,
@@ -39,7 +38,6 @@ libraryDependencies ++= {
     "io.spray"                      %  "spray-client"         % sprayVersion ,
     "io.spray"                      %% "spray-json"           % "1.2.5"  ,
     "ch.qos.logback"                %  "logback-classic"      % "1.0.10",
-    "com.typesafe.akka"             %%  "akka-testkit"        % akkaVersion   % "test",
     "org.json4s"                    %%  "json4s-native"       % "3.2.2"
   )
 }
