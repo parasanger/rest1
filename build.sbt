@@ -40,8 +40,7 @@ libraryDependencies ++= {
     "io.spray"                      %% "spray-json"           % "1.2.5"  ,
     "ch.qos.logback"                %  "logback-classic"      % "1.0.10",
     "com.typesafe.akka"             %%  "akka-testkit"        % akkaVersion   % "test",
-    "org.json4s"                    %%  "json4s-native"       % "3.2.2",
-    "org.scalatest"                 %% "scalatest"            % "1.9.1"       % "test"
+    "org.json4s"                    %%  "json4s-native"       % "3.2.2"
   )
 }
 
