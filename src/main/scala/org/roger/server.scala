@@ -8,9 +8,11 @@ import spray.can.Http
 import spray.json._
 import spray.httpx._
 import spray.http.MediaTypes._
+import spray.http.{StatusCodes, StatusCode}
+import spray.util.LoggingContext
 
 case class MyRequest(originator: String, message: String, receivers: List[String])
-case class MyResponse(tiers: Array[(String, Array[String])])
+case class MyResponse(tiers: Array[(String, Int, Array[String])])
 
 object MyJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val RequestFormat = jsonFormat3(MyRequest)
@@ -29,6 +31,9 @@ object Main extends App {
   IO(Http) ! Http.Bind(service, host, port)
 }
 
+/**
+ * http requets handling
+ */
 class SprayActor extends Actor with SprayService with ActorLogging {
   def actorRefFactory = context
   def receive = runRoute(sprayRoute)
@@ -37,27 +42,56 @@ class SprayActor extends Actor with SprayService with ActorLogging {
 trait SprayService extends HttpService {
   import MyJsonProtocol._
 
+  implicit def myExceptionHandler(implicit log: LoggingContext) =
+    ExceptionHandler {
+      case e: NoSuchElementException => ctx =>
+        log.warning("Request format bad", ctx.request)
+        ctx.complete(StatusCodes.UnprocessableEntity, "Unmarshalling problem")
+      case f: RuntimeException => ctx =>
+        log.error("Request Handling problem", f)
+        ctx.complete(StatusCodes.InternalServerError, "Server Error")
+      case g:Throwable => ctx =>
+        log.error("Unexpected problem",g)
+        ctx.complete(StatusCodes.InternalServerError, "Server Error")
+    }
+
   val sprayRoute = {
     path("send") {
       post {
         entity(as[MyRequest]) {request =>
           val response: Array[ResultTier] = Solver.findTiers(request)
           respondWithMediaType(`application/json`) {
-            // problems serialzing inner custome type.
-            val ret = for (t <- response) yield { (t.tier, t.messages)}
+            // problems serialzing inner complex type.
+            val ret = for (t <- response) yield { (t.tier, t.capacity, t.messages)}
             complete(ret)
           }
         }
       } ~
       get {
         complete("\n\nPING\n\n")
+      } ~
+      put  {
+        respondWithMediaType(`application/json`) {
+          respondWithStatus(responseStatus = StatusCodes.NotFound) {
+            complete("""{ "status" : "PUT Not Supported" }""")
+          }
+        }
+      } ~
+        delete  {
+          respondWithMediaType(`application/json`) {
+            respondWithStatus(responseStatus = StatusCodes.NotFound) {
+            complete("""{ "status" : "DELETE Not Supported" }""")
+            }
+          }
+
       }
     }
   }
 }
 
-// the problem at hand.  A variant on making change with the least
-// number coins
+/** the problem at hand.  A variant on making change with the least
+ * number coins
+**/
 
 sealed abstract class Tier {
   def tier: String
@@ -88,13 +122,11 @@ object Solver {
       new UsedTier(tier = rateTier.tier, chunks = chunks, capacity = rateTier.capacity)
     }
 
-    printf(s"\n ${usedTiers.mkString(" , ")}\n ")
-
     // now we have how we want in each tier, divvy up and return
     var sliceIdx : Int = 0
     val result = for (usedTier <-  usedTiers) yield {
       val msg = request.receivers.slice(sliceIdx, sliceIdx + usedTier.capacity * usedTier.chunks)
-      val resultTier = new ResultTier(messages = msg, tier = usedTier.tier)
+      val resultTier = new ResultTier(messages = msg, tier = usedTier.tier, capacity=msg.length)
       sliceIdx = sliceIdx + usedTier.capacity * usedTier.chunks
 
       resultTier
