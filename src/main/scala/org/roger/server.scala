@@ -21,7 +21,7 @@ object MyJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
 object Main extends App {
 
-  implicit val system = ActorSystem("sendhub")
+  implicit val system = ActorSystem("hub")
 
   val config = ConfigFactory.load()
   val host = config.getString("http.host")
@@ -50,7 +50,7 @@ trait SprayService extends HttpService {
       case f: RuntimeException => ctx =>
         log.error("Request Handling problem", f)
         ctx.complete(StatusCodes.InternalServerError, "Server Error")
-      case g:Throwable => ctx =>
+      case g: Throwable => ctx =>
         log.error("Unexpected problem",g)
         ctx.complete(StatusCodes.InternalServerError, "Server Error")
     }
@@ -59,7 +59,7 @@ trait SprayService extends HttpService {
     path("send") {
       post {
         entity(as[MyRequest]) {request =>
-          val response: Array[ResultTier] = Solver.findTiers(request)
+          val response = Solver.findTiers(request)
           respondWithMediaType(`application/json`) {
             // problems serialzing inner complex type.
             val ret = for (t <- response) yield { (t.tier, t.capacity, t.messages)}
@@ -89,53 +89,67 @@ trait SprayService extends HttpService {
   }
 }
 
-/** the problem at hand.  A variant on making change with the least
- * number coins
-**/
-
 sealed abstract class Tier {
   def tier: String
   def capacity: Int
 }
 
 case class RateTier(tier: String, capacity: Int) extends Tier
-case class UsedTier(tier: String, capacity: Int, chunks: Int = 0) extends Tier
 case class ResultTier(tier: String, messages: List[String], capacity: Int = 0) extends Tier
 
-object Solver {
 
+
+object Solver {
   val ip4 = RateTier("10.0.4.0/24", 25)
   val ip3 = RateTier("10.0.3.0/24", 10)
   val ip2 = RateTier("10.0.2.0/24", 5)
   val ip1 = RateTier("10.0.1.0/24", 1)
 
-  val rates =  Array(ip4, ip3, ip2, ip1)
+  val rates = Array(ip4, ip3, ip2, ip1)
 
-  // after the setup some greedy computation
   def findTiers(request: MyRequest) = {
-    def findTierChunks(size: Int, t: RateTier) = size / t.capacity     // Div
-
-    var numMsgs = request.receivers.size
-    val usedTiers = for (rateTier <- rates) yield {
-      val chunks = findTierChunks(numMsgs, rateTier)
-      numMsgs = numMsgs - chunks * rateTier.capacity
-      new UsedTier(tier = rateTier.tier, chunks = chunks, capacity = rateTier.capacity)
+    rates.map {
+      case tier =>
+        val l = request.receivers.grouped(tier.capacity).toList.flatten
+        val r = ResultTier(tier = tier.tier, messages = l, capacity = l.size)
+        request.receivers.drop(l.size)
+        r
     }
-
-    // now we have how we want in each tier, divvy up and return
-    var sliceIdx : Int = 0
-    val result = for (usedTier <-  usedTiers) yield {
-      val msg = request.receivers.slice(sliceIdx, sliceIdx + usedTier.capacity * usedTier.chunks)
-      val resultTier = new ResultTier(messages = msg, tier = usedTier.tier, capacity=msg.length)
-      sliceIdx = sliceIdx + usedTier.capacity * usedTier.chunks
-
-      resultTier
-    }
-    result
   }
 }
-
-
+//
+//  object Solver {
+//
+//    val ip4 = RateTier("10.0.4.0/24", 25)
+//    val ip3 = RateTier("10.0.3.0/24", 10)
+//    val ip2 = RateTier("10.0.2.0/24", 5)
+//    val ip1 = RateTier("10.0.1.0/24", 1)
+//
+//    val rates =  Array(ip4, ip3, ip2, ip1)
+//
+//    // after the setup some greedy computation
+//    def findTiers(request: MyRequest) = {
+//      def findTierChunks(size: Int, t: RateTier) = size / t.capacity     // Div
+//
+//      var remainingMsgs = request.receivers.size
+//      val usedTiers = for (rateTier <- rates) yield {
+//        val chunks = findTierChunks(remainingMsgs, rateTier)
+//
+//        remainingMsgs = remainingMsgs - chunks * rateTier.capacity
+//        UsedTier(tier = rateTier.tier, chunks = chunks, capacity = rateTier.capacity)
+//      }
+//
+//      // now we have how we want in each tier, divvy up and return
+//      var sliceIdx : Int = 0
+//      val result = for (usedTier <-  usedTiers) yield {
+//        val msg = request.receivers.slice(sliceIdx, sliceIdx + usedTier.capacity * usedTier.chunks)
+//        sliceIdx = sliceIdx + usedTier.capacity * usedTier.chunks
+//
+//        ResultTier(messages = msg, tier = usedTier.tier, capacity=msg.length)
+//      }
+//      result
+//    }
+//  }
 
 
 

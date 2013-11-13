@@ -63,6 +63,7 @@ Delivery
 {
 “message”:“30Rocks”, “recipients”:[“+15555555556”,“+15555555555”,“+15555555554”,“+15555555553”,
 “+15555555552”,“+15555555551”] }
+
 Possible Output:
 {
 “message”:“30Rocks”, “routes”:[
