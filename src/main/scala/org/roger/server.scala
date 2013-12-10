@@ -97,8 +97,6 @@ sealed abstract class Tier {
 case class RateTier(tier: String, capacity: Int) extends Tier
 case class ResultTier(tier: String, messages: List[String], capacity: Int = 0) extends Tier
 
-
-
 object Solver {
   val ip4 = RateTier("10.0.4.0/24", 25)
   val ip3 = RateTier("10.0.3.0/24", 10)
